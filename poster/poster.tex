@@ -1,0 +1,409 @@
+\documentclass[
+12pt, % slightly smaller to fit everything
+portrait,
+margin=5mm,
+innermargin=5mm,
+blockverticalspace=5mm, % tighter vertical spacing
+colspace=10mm,
+subcolspace=10mm
+]{tikzposter}
+\geometry{paperwidth=22in,paperheight=28in}
+\makeatletter
+\setlength{\TP@visibletextwidth}{\textwidth - 2\TP@innermargin}
+\setlength{\TP@visibletextheight}{\textheight - 2\TP@innermargin}
+\makeatother
+
+% === PACKAGES ===
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{adjustbox}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{sfmath}
+
+% === BERKELEY COLORS ===
+\definecolor{BerkeleyBlue}{HTML}{003262}
+\definecolor{CaliforniaGold}{HTML}{FDB515}
+\definecolor{FoundersRock}{HTML}{3B7EA1}
+\definecolor{LightGray}{HTML}{F5F5F5}
+
+% === CUSTOM THEME ===
+\definecolorstyle{BerkeleyTheme}{
+	\definecolor{colorOne}{named}{BerkeleyBlue}
+	\definecolor{colorTwo}{named}{LightGray}
+	\definecolor{colorThree}{named}{CaliforniaGold}
+}{
+	\colorlet{backgroundcolor}{white}
+	\colorlet{framecolor}{BerkeleyBlue}
+	\colorlet{titlefgcolor}{white}
+	\colorlet{titlebgcolor}{BerkeleyBlue}
+	\colorlet{blocktitlebgcolor}{BerkeleyBlue}
+	\colorlet{blocktitlefgcolor}{white}
+	\colorlet{blockbodybgcolor}{white}
+	\colorlet{blockbodyfgcolor}{black}
+}
+
+\defineblockstyle{BerkeleyBlock}{
+	titlewidthscale=1, bodywidthscale=1, titlecenter,
+	titleoffsetx=0pt, titleoffsety=0pt, bodyoffsetx=0pt, bodyoffsety=0pt,
+	bodyverticalshift=0pt, roundedcorners=0, linewidth=2pt,
+	titleinnersep=10pt, bodyinnersep=14pt % tighter padding
+}{
+	\begin{scope}[line width=\blocklinewidth, rounded corners=\blockroundedcorners]
+		\ifBlockHasTitle
+		\draw[color=framecolor, fill=blocktitlebgcolor]
+		(blockbody.south west) rectangle (blocktitle.north east);
+		\draw[color=framecolor, fill=blockbodybgcolor]
+		(blockbody.south west) rectangle (blockbody.north east);
+		\else
+		\draw[color=framecolor, fill=blockbodybgcolor]
+		(blockbody.south west) rectangle (blockbody.north east);
+		\fi
+	\end{scope}
+}
+
+\definelayouttheme{BerkeleyLayout}{
+	\usecolorstyle{BerkeleyTheme}
+	\usebackgroundstyle{Default}
+	\usetitlestyle{Filled}
+	\useblockstyle{BerkeleyBlock}
+}
+\usetheme{BerkeleyLayout}
+
+% === TITLE ===
+\title{\parbox{0.95\linewidth}{\centering\huge\textbf{Predicting Benign Overfitting via Spectral Geometry}}}
+\author{\Large Divit Rawal}
+\institute{\large UC Berkeley}
+
+% ==============================================================================
+\begin{document}
+	\maketitle
+	
+	% ==============================================================================
+	% TOP SECTION: THEORY & MATH
+	% ==============================================================================
+	\begin{columns}
+		% ---------------- LEFT COLUMN ----------------
+		\column{0.5}
+		
+		% === MOTIVATION ===
+		\block{Motivation}{
+			\textbf{Classical intuition:} More parameters $\Rightarrow$ more overfitting.
+			
+			\textbf{Modern ML:}
+			\begin{itemize}[leftmargin=*, itemsep=0.25em]
+				\item Deep / overparameterized models ($p \gg N$) often interpolate and still generalize.
+				\item Some interpolating solutions are \emph{benign}, others \emph{catastrophic}.
+				\item Width or sample size alone do \underline{not} predict which.
+			\end{itemize}
+			
+			\textbf{Question.} Can we predict benign vs non-benign interpolation
+			using only the unlabeled feature matrix $X$?
+			
+			\textbf{Thesis.} Generalization is controlled by a simple spectral quantity
+			of the feature covariance, not by $p$ or $N$ in isolation.
+		}
+		
+		% === MODEL + CERTIFICATE INTUITION ===
+		\block{Setup and Certificate}{
+			\small
+			\textbf{Model.} Fixed features $\phi(x)\in\mathbb{R}^p$ and realizable linear regression
+			\[
+			y = \phi(x)^\top \theta^\star + \varepsilon,\quad
+			\mathbb{E}[\varepsilon\mid x]=0,\;
+			\mathbb{E}[\varepsilon^2\mid x]\le\sigma^2,\;
+			\|\theta^\star\|_2\le B.
+			\]
+			With $N$ samples, $X\in\mathbb{R}^{N\times p}$, empirical covariance
+			$\hat\Sigma = \tfrac1N X^\top X$, population $\Sigma = \mathbb{E}[\phi(x)\phi(x)^\top]$.
+			
+			\vspace{0.3em}
+			\textbf{Ridge predictor.}
+			\[
+			\hat\theta_\lambda
+			= (\hat\Sigma + \lambda I)^{-1} \tfrac1N X^\top y.
+			\]
+			
+			\vspace{0.3em}
+			\textbf{Effective dimension.}
+			\[
+			d_\lambda(\hat\Sigma)
+			\doteq \mathrm{Tr}\big(\hat\Sigma(\hat\Sigma+\lambda I)^{-1}\big)
+			= \sum_j \frac{\hat\mu_j}{\hat\mu_j+\lambda}.
+			\]
+			
+			Directions with $\hat\mu_j\gg\lambda$ contribute $\approx 1$ (active DoF);
+			directions with $\hat\mu_j\ll\lambda$ contribute $\approx 0$ (frozen).
+			
+			\vspace{0.4em}
+			\coloredbox[bgcolor=LightGray, framecolor=BerkeleyBlue, roundedcorners=4]{
+				\centering
+				\textbf{\large Spectral Risk Certificate}
+				\vspace{0.3em}
+				
+				\[
+				\boxed{
+					\widehat{\mathcal{R}}_\lambda
+					\doteq
+					\underbrace{\lambda B^2}_{\text{worst-case bias}}
+					+
+					\underbrace{\frac{\sigma^2}{N} d_\lambda(\hat\Sigma)}_{\text{variance from geometry}}
+				}
+				\]
+				
+				\smallskip
+				\textit{Computable from $X$ alone (unlabeled geometry).}
+			}
+		}
+		
+		% === SPECTRAL / DOUBLE-DESCENT INTUITION ===
+		\block{Spectral Intuition}{
+			\small
+			Let $\alpha = p/N$ and consider small $\lambda$:
+			\[
+			\frac{d_\lambda(\hat\Sigma)}{N} \approx \frac{\min(p,N)}{N} = \min(\alpha,1).
+			\]
+			\begin{itemize}[leftmargin=*, itemsep=0.25em]
+				\item $\alpha<1$: $d_\lambda/N \uparrow \alpha$ as $\lambda\to 0$.
+				\item $\alpha>1$: $d_\lambda/N \uparrow 1$ and \textbf{saturates} (only $N$ samples).
+				\item $d_\lambda/N \approx 1$: effective DoF $\approx$ sample size — the interpolation threshold.
+			\end{itemize}
+			
+			Classical formulas suggest
+			\[
+			\text{Var} \sim \frac{d_\lambda/N}{1 - d_\lambda/N},
+			\]
+			which blows up at $d_\lambda/N=1$.
+			
+			\vspace{0.2em}
+			\textbf{Prediction:} In $(d_\lambda/N,\;\text{risk})$ coordinates:
+			\begin{itemize}[leftmargin=*, itemsep=0.25em]
+				\item Nearly linear scaling of risk with $d_\lambda/N$ away from 1.
+				\item A vertical ``spike'' near $d_\lambda/N=1$ (double-descent peak).
+			\end{itemize}
+		}
+		
+		% ---------------- RIGHT COLUMN ----------------
+		\column{0.5}
+		
+		% === MAIN THEORETICAL RESULTS ===
+		\block{Bias--Variance Decomposition \& Main Theorem}{
+			
+			\textbf{Excess empirical prediction error}
+			\[
+			\mathcal{E}_{\mathrm{emp}}(\theta;X)
+			= \tfrac1N \|X(\theta-\theta^\star)\|_2^2
+			= (\theta-\theta^\star)^\top \hat\Sigma (\theta-\theta^\star).
+			\]
+			
+			For ridge $\hat\theta_\lambda$, let $\Delta_\lambda = \hat\theta_\lambda - \theta^\star$.
+			Conditioned on $X$,
+			\[
+			\mathbb{E}[\mathcal{E}_{\mathrm{emp}}(\hat\theta_\lambda;X)\mid X]
+			=
+			\mathrm{Bias}_\lambda^2(X)
+			+
+			\mathrm{Var}_\lambda(X).
+			\]
+			
+			\textbf{Theorem 1 (Fixed-design spectral risk bound).}
+			
+			Assume $\|\theta^\star\|_2\le B$ and
+			$\mathbb{E}[\varepsilon\varepsilon^\top\mid X]\preceq \sigma^2 I_N$.
+			Then for all $\lambda>0$,
+			\[
+			\mathbb{E}[\mathcal{E}_{\mathrm{emp}}(\hat\theta_\lambda;X)\mid X]
+			\le
+			\lambda B^2 + \frac{\sigma^2}{N} d_\lambda(\hat\Sigma).
+			\]
+			
+			\textbf{Proof sketch:}
+			\begin{itemize}[leftmargin=*, itemsep=0.2em]
+				\item Express $\Delta_\lambda$ in eigenbasis of $\hat\Sigma$.
+				\item Show
+				$\mathrm{Bias}_\lambda^2(X)
+				= \lambda^2 \theta^{\star\top}(\hat\Sigma+\lambda I)^{-1}
+				\hat\Sigma(\hat\Sigma+\lambda I)^{-1}\theta^\star
+				\le \lambda B^2$.
+				\item Show
+				$\mathrm{Var}_\lambda(X)
+				\le (\sigma^2/N)\mathrm{Tr}[\hat\Sigma^2(\hat\Sigma+\lambda I)^{-2}]
+				\le (\sigma^2/N)d_\lambda(\hat\Sigma)$.
+			\end{itemize}
+			
+			\textbf{Interpretation.} Conservative: if $\widehat{\mathcal{R}}_\lambda$ is small, then risk is small even in the worst orientation of $\theta^\star$. When the variance term dominates, risk $\approx (\sigma^2/N)d_\lambda$,
+				giving the linear trend in the collapse plot.
+		}
+		
+		% === CONCENTRATION / CERTIFICATE STABILITY ===
+		\block{Certificate Stability in Random Design}{
+			
+			Assume sub-Gaussian features with parameter $\kappa$.
+			
+			\textbf{Lemma (Lipschitz stability).}
+			If $\|\hat\Sigma-\Sigma\|_{\mathrm{op}} \le \delta$, then
+			\[
+			|d_\lambda(\hat\Sigma) - d_\lambda(\Sigma)|
+			\le \frac{\delta}{\lambda}\,\mathrm{rank}(\Sigma+\hat\Sigma).
+			\]
+			
+			\textbf{Lemma (Covariance concentration).}
+			w.p.\ $\ge 1-\eta$,
+			\[
+			\|\hat\Sigma-\Sigma\|_{\mathrm{op}}
+			\le
+			C_\kappa\left(
+			\sqrt{\frac{\mathrm{Tr}(\Sigma)}{N}}
+			+
+			\sqrt{\frac{\log(1/\eta)}{N}}
+			\right).
+			\]
+			
+			\textbf{Corollary (Effective-dimension concentration).}
+			Combining the two,
+			\[
+			d_\lambda(\hat\Sigma) \approx d_\lambda(\Sigma)
+			\quad\text{with high probability.}
+			\]
+			
+			\textbf{Spectral certificate.}
+			The empirical quantity
+			\[
+			\widehat{\mathcal{R}}_\lambda
+			= \lambda B^2 + \frac{\sigma^2}{N} d_\lambda(\hat\Sigma)
+			\]
+			concentrates around the population bound
+			$\mathcal{R}^{\mathrm{pop}}_\lambda
+			= \lambda B^2 + \frac{\sigma^2}{N} d_\lambda(\Sigma)$.
+			
+			\begin{itemize}[leftmargin=*, itemsep=0.2em]
+				\item Works in $p\gg N$ (no assumption on $\lambda_{\min}(\hat\Sigma)$).
+				\item If the certificate is small, both empirical and population risks are small: and we have 
+				a scalar certificate of benignness.
+			\end{itemize}
+		}
+		
+	\end{columns}
+	
+	% ==============================================================================
+	% MIDDLE SECTION: EMPIRICAL RESULTS
+	% ==============================================================================
+	
+	\block{Empirical Validation: Geometry Predicts Benign Interpolation}{
+		\small
+		\begin{minipage}[t]{0.32\linewidth}
+			\centering
+			\textbf{1. Risk vs Effective Dimension}
+			\vspace{0.2em}
+			
+			\includegraphics[width=0.95\linewidth]{risk_collapse.png}
+			
+			\vspace{0.2em}
+			Excess risk vs.\ $d_\lambda(\Sigma)/N$ across aspect ratios
+			$\alpha=p/N$ and regularization $\lambda$.
+			Away from $d_\lambda/N\approx 1$, all points lie on an
+			almost linear trend predicted by $(\sigma^2/N)d_\lambda$.
+			The tall column at $d_\lambda/N\approx 1$ is the predicted
+			interpolation ``singularity''.
+		\end{minipage}\hfill
+		\begin{minipage}[t]{0.32\linewidth}
+			\centering
+			\textbf{2. ROC: Benign vs Non-Benign}
+			\vspace{0.2em}
+			
+			\includegraphics[width=0.95\linewidth]{roc.png}
+			
+			\vspace{0.2em}
+			We label a model as benign if its test excess risk
+			is below $0.05$.
+			The spectral certificate $\widehat{\mathcal{R}}_\lambda$
+			(blue/orange, AUC $\approx 0.90$) strongly outperforms:
+			\begin{itemize}[leftmargin=*, itemsep=0.15em]
+				\item effective dimension alone $d_\lambda/N$ (AUC $\approx 0.48$)
+				\item classical $1/N$ scaling (AUC $\approx 0.25$)
+				\item total variance $\mathrm{Tr}(\Sigma)$ (AUC $\approx 0.62$).
+			\end{itemize}
+		\end{minipage}\hfill
+		\begin{minipage}[t]{0.32\linewidth}
+			\centering
+			\textbf{3. Certificate vs Actual Risk}
+			\vspace{0.2em}
+			
+			\includegraphics[width=0.95\linewidth]{scatter.png}
+			
+			\vspace{0.2em}
+			Each point is one trained model (various $\alpha$ and $\lambda$).
+			X-axis: $\widehat{\mathcal{R}}_\lambda$ (unlabeled geometry).
+			Y-axis: test excess risk.
+			Most points lie between $y=x$ (black) and $y=5x$ (red):
+			the certificate upper-bounds risk within a small constant
+			factor over three orders of magnitude. $r^2 
+			\approx .83$.
+		\end{minipage}
+	}
+	
+	% ==============================================================================
+	% BOTTOM SECTION: SUMMARY & OUTLOOK
+	% ==============================================================================
+	
+	\block{Summary, Contributions, and Outlook}{
+		\small
+		\begin{minipage}[t]{0.56\linewidth}
+			\textbf{Main takeaways.}
+			\begin{itemize}[leftmargin=*, itemsep=0.3em]
+				\item A single scalar
+				\[
+				\widehat{\mathcal{R}}_\lambda
+				= \lambda B^2 + \frac{\sigma^2}{N} d_\lambda(\hat\Sigma)
+				\]
+				computed from unlabeled features serves as a
+				spectral certificate of benign generalization.
+				\item Risk curves across widths and regularization
+				collapse when parameterized by effective degrees
+				of freedom $d_\lambda/N$, with a universal spike at
+				$d_\lambda/N\approx 1$.
+				\item Width and sample size matter only through the
+				spectrum of the learned representation.
+			\end{itemize}
+			
+			\vspace{0.3em}
+			\textbf{Contributions.}
+			\begin{enumerate}[leftmargin=*, itemsep=0.25em]
+				\item A finite-sample bias--variance bound for ridge
+				depending only on $d_\lambda(\hat\Sigma)$, valid for $p\gg N$.
+				\item Concentration results showing that the empirical
+				certificate tracks the ideal population bound
+				without relying on $\lambda_{\min}(\hat\Sigma)$.
+				\item Empirical evidence that the certificate almost
+				linearly parameterizes risk and achieves AUC $\approx 0.9$
+				for predicting benign vs non-benign interpolation.
+			\end{enumerate}
+		\end{minipage}\hfill
+		\begin{minipage}[t]{0.4\linewidth}
+			\textbf{Future directions.}
+			\begin{itemize}[leftmargin=*, itemsep=0.25em]
+				\item Apply spectral certificates to full deep nets
+				(beyond last-layer linearization).
+				\item Study robustness to label noise, distribution shift,
+				and heavy-tailed features.
+				\item Unsupervised choice of $\lambda$ from spectral geometry alone.
+				\item Connections to NTK, kernel methods, and
+				information-theoretic capacity measures.
+			\end{itemize}
+			
+			\vspace{0.3em}
+			\textbf{Stat mech view.}
+			\begin{itemize}[leftmargin=*, itemsep=0.25em]
+				\item $\sigma^2/N$ $\approx$ temperature / noise power.
+				\item $d_\lambda$ counts active degrees of freedom.
+				\item Benign interpolation arises when both
+				energy ($\lambda B^2$) and thermal fluctuations
+				$(\sigma^2/N)d_\lambda$ are small.
+			\end{itemize}
+		\end{minipage}
+	}
+	
+\end{document}
